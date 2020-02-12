@@ -1,10 +1,10 @@
 package certstream
 
 import (
-	"time"
 	"github.com/gorilla/websocket"
 	"github.com/jmoiron/jsonq"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func CertStreamEventStream(skipHeartbeats bool) (chan jsonq.JsonQuery, chan error) {
@@ -23,6 +23,16 @@ func CertStreamEventStream(skipHeartbeats bool) (chan jsonq.JsonQuery, chan erro
 
 			defer c.Close()
 			defer close(outputStream)
+
+			go func() {
+				for {
+					time.Sleep(15 * time.Second)
+					if err := c.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+						errStream <- errors.Wrap(err, "Error sending ping, terminating ping sender")
+						return
+					}
+				}
+			}()
 
 			for {
 				var v interface{}
